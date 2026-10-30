@@ -1,0 +1,12 @@
+{
+  "img_size": 64,
+  "class_names": [
+    "Not Drowsy",
+    "Drowsy"
+  ],
+  "best_variant": "CNN (+dropout +early stopping)",
+  "threshold": 0.5,
+  "tensorflow_version": "2.21.0",
+  "test_accuracy": 0.7868333333333334,
+  "test_f1": 0.82404732425368
+}

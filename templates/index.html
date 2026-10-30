@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#dcecf0">
+  <title>DriveGuard AI</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="{{ url_for('static', filename='app.js') }}" defer></script>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="DriveGuard AI home">
+        <span class="brand-mark" aria-hidden="true">DG</span>
+        <span>DriveGuard <strong>AI</strong></span>
+      </a>
+      <span class="prototype-tag"><span></span> Image assessment</span>
+    </header>
+
+    <section class="intro" aria-labelledby="page-title">
+      <p class="eyebrow">DRIVER WELLNESS / SINGLE IMAGE</p>
+      <h1 id="page-title">A clearer view<br>of driver alertness.</h1>
+      <p class="intro-copy">Choose a face image or take a photo to run it through the drowsiness model.</p>
+    </section>
+
+    {% if error %}<div class="notice notice-error" role="alert">{{ error }}</div>{% endif %}
+
+    <section class="workspace" aria-label="Drowsiness analysis">
+      <div class="analyzer">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">ANALYZE</p>
+            <h2>Driver image</h2>
+          </div>
+          <span class="step-number">01</span>
+        </div>
+
+        <form method="post" enctype="multipart/form-data" id="analysisForm">
+          <label class="upload-zone" for="imageFile" id="uploadZone">
+            <span class="upload-icon" aria-hidden="true">↑</span>
+            <span class="upload-title" id="uploadTitle">Drop an image here</span>
+            <span class="upload-hint" id="uploadHint">or browse JPG, JPEG, PNG</span>
+            <input id="imageFile" name="image" type="file" accept="image/png,image/jpeg">
+          </label>
+
+          <div class="camera-area">
+            <video id="cameraVideo" autoplay playsinline hidden></video>
+            <canvas id="cameraCanvas" hidden></canvas>
+            <input type="hidden" name="camera_data" id="cameraData">
+            <div class="camera-controls">
+              <button class="button button-secondary" type="button" id="startCamera">
+                <span aria-hidden="true">◎</span> Use camera
+              </button>
+              <button class="button button-secondary" type="button" id="capturePhoto" hidden>
+                Capture photo
+              </button>
+              <span class="camera-message" id="cameraMessage" aria-live="polite"></span>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <label class="toggle-label" for="autoCrop">
+              <input id="autoCrop" name="auto_crop" type="checkbox" checked>
+              <span class="toggle-track" aria-hidden="true"></span>
+              <span>Auto-crop face</span>
+            </label>
+            <label class="threshold-control" for="threshold">
+              <span>Alert threshold</span>
+              <input id="threshold" name="threshold" type="number" min="0.05" max="0.95" step="0.05" value="{{ meta.get('threshold', 0.5) }}">
+            </label>
+          </div>
+
+          <button class="button button-primary" type="submit">
+            Analyze image <span aria-hidden="true">→</span>
+          </button>
+        </form>
+        <p class="safety-note">This prototype assesses one image and is not a certified safety device. Never rely on it while driving.</p>
+      </div>
+
+      <aside class="model-panel" aria-label="Model information">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">MODEL PROFILE</p>
+            <h2>At a glance</h2>
+          </div>
+          <span class="step-number">02</span>
+        </div>
+        <div class="accuracy-block">
+          <span class="metric-label">TEST ACCURACY</span>
+          <strong class="accuracy-value">{{ accuracy }}</strong>
+          {% if accuracy == 'Not recorded' %}
+            <span class="metric-note">Add <code>test_accuracy</code> to model_meta.json</span>
+          {% else %}
+            <span class="metric-note">Measured on the held-out test set</span>
+          {% endif %}
+        </div>
+        <dl class="model-details">
+          <div><dt>Architecture</dt><dd>{{ meta.get('best_variant', 'CNN') }}</dd></div>
+          <div><dt>Input size</dt><dd>{{ meta.get('img_size', '--') }} × {{ meta.get('img_size', '--') }}</dd></div>
+          <div><dt>Test F1</dt><dd>{{ f1 }}</dd></div>
+        </dl>
+        <div class="class-key">
+          <span><i class="dot dot-alert"></i>Drowsy</span>
+          <span><i class="dot dot-ready"></i>Not drowsy</span>
+        </div>
+      </aside>
+    </section>
+
+    {% if prediction %}
+    <section class="results" aria-live="polite">
+      <div class="result-heading">
+        <div>
+          <p class="eyebrow">ASSESSMENT RESULT</p>
+          <h2 class="result-state {{ 'state-alert' if prediction.drowsy else 'state-ready' }}">
+            {{ 'Drowsy' if prediction.drowsy else 'Not drowsy' }}
+          </h2>
+        </div>
+        <div class="result-confidence">
+          <span>Confidence</span><strong>{{ '%.1f'|format(prediction.confidence * 100) }}%</strong>
+        </div>
+      </div>
+      {% if prediction.face_warning %}<p class="notice notice-warn">{{ prediction.face_warning }}</p>{% endif %}
+      {% if prediction.detector_warning %}<p class="notice notice-warn">{{ prediction.detector_warning }}</p>{% endif %}
+      <div class="probability-row">
+        <span>Probability of drowsiness</span>
+        <strong>{{ '%.1f'|format(prediction.probability * 100) }}%</strong>
+      </div>
+      <div class="probability-track"><span style="width: {{ [0, [prediction.probability * 100, 100]|min]|max }}%"></span></div>
+      <div class="image-results">
+        <figure><img src="{{ input_image }}" alt="Uploaded driver image"><figcaption>Original image</figcaption></figure>
+        <figure><img src="{{ model_image }}" alt="Image passed to the model"><figcaption>Image used by model</figcaption></figure>
+      </div>
+      {% if prediction.drowsy %}<p class="result-advice">The driver should stop somewhere safe and take a break.</p>{% endif %}
+    </section>
+    {% endif %}
+
+    <footer><span>DRIVEGUARD AI</span><span>Prototype · Not for use as a safety system</span></footer>
+  </main>
+</body>
+</html>

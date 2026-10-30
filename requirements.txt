@@ -1,0 +1,9 @@
+# For the Flask app (app.py). Install with:  pip install -r requirements.txt
+# IMPORTANT: use the same TensorFlow version that trained the model. The notebook prints it and saves it in
+# model_meta.json ("tensorflow_version"). If the app cannot load the model, install that exact version,
+# e.g.  pip install tensorflow==2.19.0
+tensorflow==2.19.0
+flask>=3.0
+opencv-python-headless<5   # optional (face auto-crop). OpenCV 5.x lacks the face detector, so stay on 4.x
+numpy
+pillow
